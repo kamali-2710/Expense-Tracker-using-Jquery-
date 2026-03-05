@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker</title>
+    <link rel="icon" href="./img/budget_11254210.png" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <div class="table-wrapper">
+      <div class="form">
+        <h2>Expense Tracker</h2>
+        <select name="" id="catgry">
+          <option value="">Select Category</option>
+          <option value="Income">Income</option>
+          <option value="Expense">Expense</option>
+        </select>
+        <span class="err" id="categoryerr"></span>
+        <input type="text" placeholder="Enter your Expense Name" id="expense" />
+        <span class="err" id="expenseerr"></span>
+        <input type="number" placeholder="Enter Amount" id="amount" />
+        <span class="err" id="amounterr"></span>
+        <button type="submit" id="btn">Add Transaction</button>
+      </div>
+      <div class="filter" style="margin: 20px 0">
+        <select id="filterCategory">
+          <option value="All">All</option>
+          <option value="Income">Income</option>
+          <option value="Expense">Expense</option>
+        </select>
+        <button type="button" onclick="window.print()" id="print-btn">print</button>
+        
+       </div>
+      <table>
+        <tr>
+          <th>S.No</th>
+          <th>Category</th>
+          <th>Expense Name</th>
+          <th>Income Amount</th>
+          <th>Expense Amount</th>
+        </tr>
+        <tbody id="data"></tbody>
+      </table>
+      <div class="summary-box">
+        <h3>Summary</h3>
+        <p>Total Income: <span id="totalIncomeDisplay">₹ </span></p>
+        <p>Total Expense: <span id="totalExpenseDisplay">₹ </span></p>
+        <p>Balance: <span id="balanceDisplay">₹ </span></p>
+      </div>
+    </div>
+    <script>
+      $(document).ready(function () {
+        datatable(); // page load time-la old data show
+
+        $("#btn").on("click", function () {
+          let category = $("#catgry").val();
+          let expense = $("#expense").val();
+          let amount = $("#amount").val();
+
+          let categoryerr = $("#categoryerr");
+          let expenseerr = $("#expenseerr");
+          let amounterr = $("#amounterr");
+
+          let namePattern = /^[a-zA-Z& ]{3,50}$/;
+          let isValid = true;
+
+          if (category == "") {
+            categoryerr.text("Category field required");
+            isValid = false;
+          } else categoryerr.text("");
+
+          if (expense == "") {
+            expenseerr.text("Expense field required");
+            isValid = false;
+          } else if (expense.length < 3) {
+            expenseerr.text("Minimum 3 letters required");
+            isValid = false;
+          } else if (!namePattern.test(expense)) {
+            expenseerr.text("Please enter letters only");
+            isValid = false;
+          } else expenseerr.text("");
+
+          if (amount == "") {
+            amounterr.text("Expense amount field required");
+            isValid = false;
+          } else amounterr.text("");
+
+          if (isValid) {
+            let dataList = JSON.parse(localStorage.getItem("dataList")) || [];
+            let incomeAmount = 0;
+            let expenseAmount = 0;
+
+            if (category === "Income") {
+              incomeAmount = amount;
+            } else {
+              expenseAmount = amount;
+            }
+
+            let datas = {
+              category: category,
+              expense: expense,
+              income: incomeAmount,
+              expenseAmt: expenseAmount,
+            };
+
+            dataList.push(datas);
+
+            localStorage.setItem("dataList", JSON.stringify(dataList));
+            Swal.fire({
+              icon: "success",
+              title: "Added Successfully!",
+              text: "Expense added to table",
+              timer: 1500,
+              showConfirmButton: false,
+            });
+            datatable();
+
+            $("#catgry").val("");
+            $("#expense").val("");
+            $("#amount").val("");
+          }
+        });
+        $("#filterCategory").on("change", function () {
+          datatable($(this).val());
+        });
+      });
+
+      function datatable(filter = "All") {
+        let data = $("#data");
+        let datas = JSON.parse(localStorage.getItem("dataList")) || [];
+        let rows = "";
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        if (datas.length > 0) {
+          let filteredData = datas.filter((ele) => {
+            if (filter === "All") return true;
+            return ele.category === filter;
+          });
+
+          filteredData.forEach((ele, index) => {
+            if (ele.category === "Income") {
+              totalIncome += Number(ele.income);
+            }
+
+            if (ele.category === "Expense") {
+              totalExpense += Number(ele.expenseAmt);
+            }
+
+            rows += `<tr style="font-weight:500; color:white">
+        <td style="background:${ele.category === "Income" ? "#08be14" : "#E52020"};
+          font-weight:bold;">${index + 1}</td>
+
+         <td style="background:${ele.category === "Income" ? "#08be14" : "#E52020"};">
+           ${ele.category}
+        </td> 
+
+          <td style="background:${ele.category === "Income" ? "#08be14" : "#E52020"};">
+         ${ele.expense}
+         </td>
+
+        <td style="background:${ele.income != 0 ? "#08be14" : ""}; 
+               background:${ele.income != 0 ? "#08be14" : "#E52020"};">
+            ${ele.income != 0 ? "₹ " + ele.income : "-"}
+        </td>
+        <td style="background:${ele.expenseAmt != 0 ? "#E52020" : ""}; 
+               background:${ele.expenseAmt != 0 ? "#08be14" : "#E52020"};">
+         ${ele.expenseAmt != 0 ? "₹ " + ele.expenseAmt : "-"}
+        </td>
+      </tr>`;
+          });
+
+          // Total Income Row
+
+          rows += `
+           <tr style="background:#f2f2f2">
+            <td></td><td></td>
+            <td colspan="1" style="text-align:center; font-size:17px; font-weight:600">Total</td>
+            <td style="color:green; font-size:17px; font-weight:600">₹ ${totalIncome}.00 Rs</td>
+            <td style="color:red; font-size:17px; font-weight:600">₹ ${totalExpense}.00 Rs</td>
+           </tr>`;
+        } else {
+          rows = `<tr><td colspan="5" align="center">No Records Found</td></tr>`;
+        }
+
+        let balance = totalIncome - totalExpense;
+
+        $("#totalIncomeDisplay").text("₹ " + totalIncome);
+        $("#totalExpenseDisplay").text("₹ " + totalExpense);
+        $("#balanceDisplay").text("₹ " + balance);
+
+        data.html(rows);
+      }
+    </script>
+  </body>
+</html>
